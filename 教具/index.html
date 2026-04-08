@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>地理教具AI：风力大小演示答疑助手</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none; /* 避免移动端长按菜单，不影响输入框 */
+        }
+        body {
+            background: linear-gradient(145deg, #c8e8ff 0%, #b0d4ee 100%);
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Noto Sans', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        /* 主卡片 */
+        .app-container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255,255,240,0.95);
+            border-radius: 48px 48px 32px 32px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.8);
+            overflow: hidden;
+            backdrop-filter: blur(1px);
+        }
+        /* 头部教具状态区 */
+        .status-panel {
+            background: #2e5a3a;
+            background-image: linear-gradient(135deg, #2b6e47, #1f4a2f);
+            padding: 20px 16px;
+            color: white;
+            border-bottom: 4px solid #ffcd7e;
+        }
+        .status-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 2px;
+            background: #f9b81b40;
+            display: inline-block;
+            width: 100%;
+            padding: 4px;
+            border-radius: 60px;
+            margin-bottom: 16px;
+        }
+        .status-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .status-card {
+            background: #00000055;
+            backdrop-filter: blur(4px);
+            border-radius: 28px;
+            flex: 1;
+            padding: 10px 8px;
+            text-align: center;
+            transition: 0.2s;
+            border: 1px solid #ffefb0;
+        }
+        .status-label {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            letter-spacing: 1px;
+        }
+        .status-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .badge-icon {
+            font-size: 1.2rem;
+        }
+        /* 控制按钮组 (快捷修改状态) */
+        .control-bar {
+            background: #fef3da;
+            padding: 12px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            border-bottom: 1px solid #e2c7a1;
+        }
+        .ctrl-btn {
+            background: white;
+            border: none;
+            border-radius: 60px;
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.1s;
+            color: #2c5a2e;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ctrl-btn:active { transform: scale(0.96); background: #e9f5e3;}
+        .wind-btn { background: #ffe0a3; color:#a55300; }
+        .terrain-btn { background: #cfebcf; color:#2c5a2e; }
+        .veg-btn { background: #bdd9a8; color:#1f4a2f; }
+        .reset-btn { background: #f5c2b1; color:#9b3a1a; }
+        /* 聊天区域 */
+        .chat-area {
+            background: #fffef7;
+            height: 55vh;
+            overflow-y: auto;
+            padding: 16px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+            animation: fadeIn 0.2s ease;
+        }
+        .user-message {
+            align-self: flex-end;
+        }
+        .ai-message {
+            align-self: flex-start;
+        }
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 24px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .user-bubble {
+            background: #d4e6f1;
+            color: #1f3b2c;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .ai-bubble {
+            background: #ecf7e6;
+            color: #1f3b2c;
+            border-bottom-left-radius: 4px;
+            border-left: 3px solid #5aa43b;
+        }
+        .message-label {
+            font-size: 0.7rem;
+            margin: 0 6px 4px;
+            color: #6f6f5e;
+        }
+        /* 输入区 */
+        .input-area {
+            background: #fff2e0;
+            padding: 12px 16px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            border-top: 1px solid #ecd9b4;
+        }
+        .text-input {
+            flex: 3;
+            padding: 12px 14px;
+            border-radius: 60px;
+            border: 1px solid #ddc7a0;
+            background: white;
+            font-size: 0.9rem;
+            outline: none;
+            transition: 0.1s;
+        }
+        .text-input:focus {
+            border-color: #6aa84f;
+            box-shadow: 0 0 0 2px #b6d7a8;
+        }
+        .voice-btn, .send-btn {
+            background: #5f8b4c;
+            border: none;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.1s;
+            font-weight: bold;
+        }
+        .voice-btn {
+            background: #4780b0;
+        }
+        .voice-btn.listening {
+            background: #ff7b2c;
+            animation: pulse 0.8s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.7; transform: scale(1);}
+            100% { opacity: 1; transform: scale(1.05);}
+        }
+        .send-btn:active, .voice-btn:active { transform: scale(0.96);}
+        footer {
+            font-size: 0.6rem;
+            text-align: center;
+            background: #e7dbbc;
+            padding: 8px;
+            color: #7f6940;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        /* 风车简单指示器 */
+        .windmill-hint {
+            background: #fff1bf;
+            border-radius: 40px;
+            padding: 4px 12px;
+            margin-top: 6px;
+            font-size: 0.7rem;
+            display: inline-block;
+        }
+        @media (max-width: 500px) {
+            .status-value { font-size: 1rem; }
+            .ctrl-btn { padding: 4px 12px; font-size: 0.7rem;}
+            .bubble { font-size: 0.85rem;}
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="status-panel">
+        <div class="status-title">🌍 风力大小演示教具 · 实时状态</div>
+        <div class="status-grid">
+            <div class="status-card">
+                <div class="status-label">💨 风速档位<br>(水平气压梯度力)</div>
+                <div class="status-value" id="windStatusDisplay">弱</div>
+            </div>
+            <div class="status-card">
+                <div class="status-label">⛰️ 地形状态</div>
+                <div class="status-value" id="terrainStatusDisplay">平坦无山</div>
+            </div>
+            <div class="status-card">
+                <div class="status-label">🌿 植被状态</div>
+                <div class="status-value" id="vegStatusDisplay">裸地无植被</div>
+            </div>
+        </div>
+        <div class="windmill-hint" id="windEffectHint">🌀 风车转速微弱 · 亮光低</div>
+    </div>
+
+    <!-- 快捷操作区，地理课堂方便切换 -->
+    <div class="control-bar">
+        <button class="ctrl-btn wind-btn" data-wind="弱">🌬️ 弱风</button>
+        <button class="ctrl-btn wind-btn" data-wind="中">🍃 中风</button>
+        <button class="ctrl-btn wind-btn" data-wind="强">💨 强风</button>
+        <button class="ctrl-btn terrain-btn" data-terrain="平坦无山">🏞️ 平坦无山</button>
+        <button class="ctrl-btn terrain-btn" data-terrain="有山体阻挡">⛰️ 有山体阻挡</button>
+        <button class="ctrl-btn terrain-btn" data-terrain="峡谷狭管通道">🏞️➡️🏔️ 峡谷狭管</button>
+        <button class="ctrl-btn veg-btn" data-veg="植被全覆盖">🌲🌳 全覆盖</button>
+        <button class="ctrl-btn veg-btn" data-veg="半覆盖">🌿🍂 半覆盖</button>
+        <button class="ctrl-btn veg-btn" data-veg="裸地无植被">🏜️ 裸地</button>
+        <button class="ctrl-btn reset-btn" id="resetDefaultBtn">🔄 重置默认</button>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+        <div class="message ai-message">
+            <div class="message-label">🌪️ 教具AI · 地理助手</div>
+            <div class="bubble ai-bubble">
+                👋 同学好！我是《风力大小演示教具》专属AI。<br>
+                当前状态：<strong>弱风 + 平坦无山 + 裸地无植被</strong>（水平气压梯度力小，无阻挡，地表光滑）。<br>
+                你可以语音/文字问我风力问题，或者直接点上面按钮改变地形、植被、风速！<br>
+                💡 试试问“为什么现在风不大？”或者“变成峡谷会怎样？”
+            </div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="textInput" class="text-input" placeholder="打字提问，如：移山、增加植被、为什么风大..." autocomplete="off">
+        <button id="voiceBtn" class="voice-btn">🎙️ 语音</button>
+        <button id="sendBtn" class="send-btn">📤 发送</button>
+    </div>
+    <footer>⚡ 结合风速档位+地形+植被 精准分析 | 支持语音输入</footer>
+</div>
+
+<script>
+    // ---------- 教具核心状态 ----------
+    let currentState = {
+        wind: "弱",      // "弱","中","强"
+        terrain: "平坦无山",  // "平坦无山","有山体阻挡","峡谷狭管通道"
+        vegetation: "裸地无植被" // "植被全覆盖","半覆盖","裸地无植被"
+    };
+
+    // 风车提示映射
+    function updateWindEffectHint() {
+        let hint = document.getElementById("windEffectHint");
+        let windLevel = currentState.wind;
+        let terrain = currentState.terrain;
+        let veg = currentState.vegetation;
+        let baseSpeed = (windLevel === "弱" ? "缓慢转动" : (windLevel === "中" ? "中速转动" : "快速转动"));
+        let extra = "";
+        if (terrain === "有山体阻挡") extra = " (山体削弱后)";
+        else if (terrain === "峡谷狭管通道") extra = " (狭管加速)";
+        if (veg === "植被全覆盖") extra += " · 植被摩擦减速";
+        else if (veg === "半覆盖") extra += " · 部分减速";
+        else extra += " · 裸地摩擦力小";
+        hint.innerHTML = `🌀 风车${baseSpeed}${extra} · 亮光${windLevel === "弱" ? "弱" : (windLevel === "中" ? "中等" : "强")}`;
+    }
+
+    // 更新界面显示
+    function updateUI() {
+        document.getElementById("windStatusDisplay").innerText = currentState.wind;
+        document.getElementById("terrainStatusDisplay").innerText = currentState.terrain;
+        document.getElementById("vegStatusDisplay").innerText = currentState.vegetation;
+        updateWindEffectHint();
+    }
+
+    // 添加聊天消息
+    function addMessage(sender, text, isUser = true) {
+        const chatArea = document.getElementById("chatArea");
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${isUser ? "user-message" : "ai-message"}`;
+        const label = document.createElement("div");
+        label.className = "message-label";
+        label.innerText = isUser ? "👩‍🎓 你" : "🧪 地理AI";
+        const bubble = document.createElement("div");
+        bubble.className = `bubble ${isUser ? "user-bubble" : "ai-bubble"}`;
+        bubble.innerText = text;
+        msgDiv.appendChild(label);
+        msgDiv.appendChild(bubble);
+        chatArea.appendChild(msgDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    // ---------- 核心地理AI规则引擎：严格基于三个状态 + 意图理解 ----------
+    // 根据用户问题和当前状态生成精准回答，并支持状态修改指令（自动更新状态）
+    function processUserInput(rawMessage) {
+        let msg = rawMessage.trim().toLowerCase();
+        if (msg === "") return null;
+
+        // 第一步：检测是否包含状态修改指令（移山，去植被，调大风，变峡谷等）
+        let stateChanged = false;
+        let changeResponse = "";
+
+        // 风速修改
+        if (msg.includes("强风") || msg.includes("强档") || msg.includes("调强") || msg.includes("调大风") || msg.includes("最大风")) {
+            if (currentState.wind !== "强") {
+                currentState.wind = "强";
+                stateChanged = true;
+                changeResponse += "✅ 已将风速档位调至【强档】（水平气压梯度力大，基础风力最强）。";
+            } else { changeResponse += "风速已经是强档啦！"; }
+        } else if (msg.includes("中风") || msg.includes("中档") || msg.includes("调中") || msg.includes("中等风力")) {
+            if (currentState.wind !== "中") {
+                currentState.wind = "中";
+                stateChanged = true;
+                changeResponse += "🍃 风速档位调至【中档】，梯度力中等，风力适中。";
+            } else { changeResponse += "风速已经是中档。"; }
+        } else if (msg.includes("弱风") || msg.includes("弱档") || msg.includes("调弱") || msg.includes("减小风")) {
+            if (currentState.wind !== "弱") {
+                currentState.wind = "弱";
+                stateChanged = true;
+                changeResponse += "🌬️ 风速档位调至【弱档】，水平气压梯度力小，基础风力较弱。";
+            } else { changeResponse += "当前已经是弱风档位。"; }
+        }
+
+        // 地形修改
+        if (msg.includes("山体") || msg.includes("加山") || msg.includes("有山") || (msg.includes("山") && (msg.includes("阻挡") || msg.includes("放山")))) {
+            if (currentState.terrain !== "有山体阻挡") {
+                currentState.terrain = "有山体阻挡";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🏔️ 地形变为【有山体阻挡】：山体会削弱风力，迎风坡减速，背风坡风更弱。";
+            } else { changeResponse += (changeResponse?" ":"") + "已经是山体阻挡状态。"; }
+        } else if (msg.includes("移山") || msg.includes("去山") || msg.includes("移除山") || msg.includes("去掉山") || (msg.includes("平坦") && msg.includes("无山"))) {
+            if (currentState.terrain !== "平坦无山") {
+                currentState.terrain = "平坦无山";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🏞️ 移除山体 → 地形变为【平坦无山】，没有阻挡，气流顺畅，风力相比有山时增强。";
+            } else { changeResponse += (changeResponse?" ":"") + "已经是平坦无山地形。"; }
+        } else if (msg.includes("峡谷") || msg.includes("狭管") || msg.includes("狭管效应") || msg.includes("变峡谷") || msg.includes("通道")) {
+            if (currentState.terrain !== "峡谷狭管通道") {
+                currentState.terrain = "峡谷狭管通道";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🏞️➡️🏔️ 地形变为【峡谷狭管通道】！气流经过狭窄通道加速，产生狭管效应，风力显著增强（出口风速骤增）。";
+            } else { changeResponse += (changeResponse?" ":"") + "已经是峡谷狭管状态，气流正在加速。"; }
+        }
+
+        // 植被修改
+        if (msg.includes("全覆盖") || msg.includes("全植被") || msg.includes("茂密森林") || (msg.includes("增加植被") && msg.includes("全")) || msg.includes("种满树")) {
+            if (currentState.vegetation !== "植被全覆盖") {
+                currentState.vegetation = "植被全覆盖";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🌲 植被状态→【全覆盖】：地表摩擦力最大，对近地面风削弱最明显，防风固沙效果好。";
+            } else { changeResponse += (changeResponse?" ":"") + "植被已经是全覆盖状态。"; }
+        } else if (msg.includes("半覆盖") || msg.includes("部分植被") || msg.includes("一半植被")) {
+            if (currentState.vegetation !== "半覆盖") {
+                currentState.vegetation = "半覆盖";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🌿 植被状态→【半覆盖】：部分地表有植被，摩擦力中等，对风力有一定削弱但不如全覆盖。";
+            } else { changeResponse += (changeResponse?" ":"") + "植被已经是半覆盖。"; }
+        } else if (msg.includes("裸地") || msg.includes("无植被") || msg.includes("去植被") || msg.includes("去掉植被") || msg.includes("砍树") || msg.includes("清除植被")) {
+            if (currentState.vegetation !== "裸地无植被") {
+                currentState.vegetation = "裸地无植被";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🏜️ 植被状态→【裸地无植被】：地表摩擦力极小，风力几乎无衰减，容易导致风蚀和起沙。";
+            } else { changeResponse += (changeResponse?" ":"") + "已经是裸地无植被。"; }
+        } else if (msg.includes("增加植被") && !msg.includes("全")) {
+            if (currentState.vegetation === "裸地无植被") {
+                currentState.vegetation = "半覆盖";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🌿 增加植被→变为【半覆盖】，摩擦力增加，风力比裸地时减弱。";
+            } else if (currentState.vegetation === "半覆盖") {
+                currentState.vegetation = "植被全覆盖";
+                stateChanged = true;
+                changeResponse += (changeResponse?" ":"") + "🌲 继续增加植被→【全覆盖】，风力被显著削弱。";
+            } else {
+                changeResponse += (changeResponse?" ":"") + "已经是全覆盖，无法再增加植被啦！";
+            }
+        }
+
+        // 若状态发生改变，更新UI并返回提示 + 进一步解释当前风力综合效果
+        if (stateChanged) {
+            updateUI();
+            // 结合新状态，生成综合风力分析
+            let analysis = getWindComprehensiveAnalysis();
+            let finalMsg = changeResponse + "\n" + analysis;
+            return finalMsg;
+        }
+
+        // 如果没有修改状态，则进行常规地理问答（基于当前状态精准解释）
+        return getGeographyAnswer(msg);
+    }
+
+    // 根据当前状态生成综合风力说明 (核心逻辑)
+    function getWindComprehensiveAnalysis() {
+        let w = currentState.wind;
+        let t = currentState.terrain;
+        let v = currentState.vegetation;
+        let gradientDesc = (w === "弱" ? "水平气压梯度力小，等压线稀疏，基础风力很弱" : (w === "中" ? "水平气压梯度力中等，基础风力适中" : "水平气压梯度力大，等压线密集，基础风力强劲"));
+        let terrainEffect = "";
+        if (t === "有山体阻挡") terrainEffect = "地形阻挡：山体削弱气流，迎风坡风速减小，背风坡更弱，整体风力比平坦时降低。";
+        else if (t === "峡谷狭管通道") terrainEffect = "狭管效应：气流经过峡谷，通道收窄，空气被挤压加速，出口处风速明显增强！城市狭管风就是典型例子。";
+        else terrainEffect = "地形平坦无山，没有阻挡或加速，气流保持原有速度。";
+
+        let vegEffect = "";
+        if (v === "植被全覆盖") vegEffect = "植被全覆盖：地表摩擦力极大，像无数小手拉住近地面风，风力被大幅削弱，防风固沙强。";
+        else if (v === "半覆盖") vegEffect = "半覆盖植被：有一定摩擦力，风力被部分削弱，比裸地小，比全覆盖大。";
+        else vegEffect = "裸地无植被：地表光滑摩擦力极小，风力几乎无损耗传导，易导致风蚀、起沙扬尘。";
+
+        let finalWind = "";
+        let baseLevel = (w === "弱" ? 1 : (w === "中" ? 2 : 3));
+        let terrainFactor = (t === "有山体阻挡" ? -1 : (t === "峡谷狭管通道" ? 1.5 : 0));
+        let vegFactor = (v === "植被全覆盖" ? -2 : (v === "半覆盖" ? -0.8 : 0));
+        let total = baseLevel + (terrainFactor===1.5?1.2:terrainFactor) + vegFactor;
+        if (total <= 1) finalWind = "最终风力微弱，风车几乎不转。";
+        else if (total <= 2) finalWind = "最终风力较小，风车慢速转动，亮光弱。";
+        else if (total <= 3.5) finalWind = "最终风力中等，风车中速转动，亮光中等。";
+        else finalWind = "最终风力强劲，风车快速转动，亮光很强！";
+
+        return `【当前状态分析】${gradientDesc}。 ${terrainEffect} ${vegEffect} 综合判断：${finalWind}`;
+    }
+
+    // 常规地理问答（不改变状态）
+    function getGeographyAnswer(msg) {
+        const w = currentState.wind;
+        const t = currentState.terrain;
+        const v = currentState.vegetation;
+
+        // 常见询问风力大小
+        if (msg.includes("风力") || msg.includes("风大") || msg.includes("风小") || msg.includes("风速") || msg.includes("风车")) {
+            return getWindComprehensiveAnalysis();
+        }
+        // 询问为什么有山体削弱/狭管加速原理
+        if ((msg.includes("山体") || msg.includes("阻挡")) && (msg.includes("作用") || msg.includes("为什么") || msg.includes("原理"))) {
+            if (t === "有山体阻挡") return "⛰️ 山体阻挡时，气流被迫抬升或绕行，消耗能量，所以山前山后风速减小。这就是地形削弱风力的原理。比如我国天山北侧山口风大，但背风坡平静。当前山体正在削弱风力。";
+            else return "目前地形不是山体状态哦，你可以点击‘有山体阻挡’或者对我说‘加山体’，就能看到阻挡削弱风力的效果！";
+        }
+        if (msg.includes("狭管") || (msg.includes("峡谷") && (msg.includes("原理") || msg.includes("为什么")))) {
+            if (t === "峡谷狭管通道") return "🏞️ 狭管效应：当空气从开阔地区进入狭窄峡谷，流管收缩，根据流体连续性原理，流速加快。就像河道变窄处水流变急！峡谷出口风力常比入口大2-3级。当前峡谷正在加速气流！";
+            else return "当前地形不是峡谷，无法演示狭管效应。请点击‘峡谷狭管通道’按钮，再来观察风力骤增的现象！";
+        }
+        if ((msg.includes("植被") || msg.includes("树") || msg.includes("草")) && (msg.includes("作用") || msg.includes("防风") || msg.includes("削弱"))) {
+            if (v !== "裸地无植被") return `🌳 植被覆盖度越高，地表粗糙度越大，对风的摩擦力越强，能显著降低近地面风速。当前${v}，${v==="植被全覆盖"?"完全保护地表，风蚀几乎为零":(v==="半覆盖"?"部分降低风速，但仍有一定防风能力":"")}。三北防护林就是利用这个原理。`;
+            else return "目前是裸地无植被，摩擦力最小，风力最强且容易起沙。如果增加植被（全覆盖/半覆盖），就能看到风速下降，起到防风固沙效果。试试说‘增加植被’！";
+        }
+        // 移山去植被类已经被状态修改捕获，但是若用户纯理论提问：
+        if (msg.includes("移山后") || msg.includes("去掉山会怎样")) {
+            let tempTerrain = currentState.terrain;
+            if (tempTerrain === "有山体阻挡") return "🏞️ 如果移走山体变成平坦地形，原本被山削弱的风力会恢复，风速变大。山区公路常建在背风坡也是同理。";
+            else return "当前本就没有山体，平坦地形下风力不受阻挡。你可以先加山体再试试移山。";
+        }
+        if (msg.includes("去掉植被后果") || msg.includes("砍树影响")) {
+            if (v !== "裸地无植被") return "⚠️ 去掉植被后地表裸露，摩擦力骤减，风力增强，风蚀加剧，容易形成沙尘天气。这正是荒漠化扩大的原因之一。";
+            else return "已经是裸地状态，地表裸露，风力很强且易起沙。建议恢复植被防风固沙。";
+        }
+        // 实验对比类
+        if (msg.includes("实验") || msg.includes("对比")) {
+            return "📚 教具可做三个实验：1.水平气压梯度力实验(调风速档位)；2.地形障碍与狭管效应(山体vs峡谷)；3.植被削弱实验。你可以通过改变状态亲身体验！当前"+getWindComprehensiveAnalysis();
+        }
+        // 默认询问，给出当前状态精解
+        return "🌍 当前教具状态："+`风速【${w}】、地形【${t}】、植被【${v}】。`+getWindComprehensiveAnalysis()+" 你可以指令我“变成峡谷”、“调强风”、“增加植被全覆盖”或问地理原理。";
+    }
+
+    // 发送消息主入口
+    function handleUserMessage(messageText) {
+        if (!messageText.trim()) return;
+        addMessage(messageText, true);
+        let reply = processUserInput(messageText);
+        if (reply) {
+            addMessage(reply, false);
+        } else {
+            addMessage("请再试试更清晰的问题，比如“现在风力如何？”“增加植被”等～", false);
+        }
+        // 同步UI（可能状态修改过）
+        updateUI();
+    }
+
+    // 重置默认
+    function resetDefault() {
+        currentState = { wind: "弱", terrain: "平坦无山", vegetation: "裸地无植被" };
+        updateUI();
+        addMessage("🔄 系统已重置为【弱风 + 平坦无山 + 裸地无植被】", false);
+        let analysis = getWindComprehensiveAnalysis();
+        addMessage(analysis, false);
+    }
+
+    // 语音识别
+    let recognition = null;
+    const voiceBtn = document.getElementById("voiceBtn");
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'zh-CN';
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            document.getElementById("textInput").value = text;
+            handleUserMessage(text);
+            voiceBtn.classList.remove("listening");
+        };
+        recognition.onerror = () => {
+            addMessage("语音识别失败，请检查麦克风权限或手动输入", false);
+            voiceBtn.classList.remove("listening");
+        };
+        recognition.onend = () => {
+            voiceBtn.classList.remove("listening");
+        };
+        voiceBtn.addEventListener("click", () => {
+            if (recognition) {
+                try {
+                    recognition.start();
+                    voiceBtn.classList.add("listening");
+                } catch(e) { addMessage("麦克风启动失败", false); }
+            } else {
+                addMessage("浏览器不支持语音输入，请使用文字输入", false);
+            }
+        });
+    } else {
+        voiceBtn.disabled = true;
+        voiceBtn.style.opacity = 0.5;
+        voiceBtn.title = "当前浏览器不支持语音";
+    }
+
+    // 绑定UI按钮
+    document.querySelectorAll("[data-wind]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            let val = btn.getAttribute("data-wind");
+            if (val === "弱") handleUserMessage("调弱风");
+            else if (val === "中") handleUserMessage("调中风");
+            else if (val === "强") handleUserMessage("调强风");
+        });
+    });
+    document.querySelectorAll("[data-terrain]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            let val = btn.getAttribute("data-terrain");
+            if (val === "平坦无山") handleUserMessage("移山变成平坦无山");
+            else if (val === "有山体阻挡") handleUserMessage("加山体阻挡");
+            else if (val === "峡谷狭管通道") handleUserMessage("变成峡谷狭管通道");
+        });
+    });
+    document.querySelectorAll("[data-veg]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            let val = btn.getAttribute("data-veg");
+            if (val === "植被全覆盖") handleUserMessage("植被全覆盖");
+            else if (val === "半覆盖") handleUserMessage("半覆盖植被");
+            else if (val === "裸地无植被") handleUserMessage("裸地无植被");
+        });
+    });
+    document.getElementById("resetDefaultBtn").addEventListener("click", resetDefault);
+    document.getElementById("sendBtn").addEventListener("click", () => {
+        const input = document.getElementById("textInput");
+        let txt = input.value;
+        if (txt) {
+            handleUserMessage(txt);
+            input.value = "";
+        }
+    });
+    document.getElementById("textInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            document.getElementById("sendBtn").click();
+        }
+    });
+
+    updateUI();
+</script>
+</body>
+</html>
